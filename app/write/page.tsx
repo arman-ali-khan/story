@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Save, Eye, Image, Table, Code, Scissors } from "lucide-react";
-import "react-quill/dist/quill.snow.css";
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
+import { BookOpen, Save, Eye, Image } from "lucide-react";
+import "medium-editor/dist/css/medium-editor.css";
+import "medium-editor/dist/css/themes/default.css";
 
 const categories = [
   { value: "romance", label: "Romance" },
@@ -33,51 +31,18 @@ interface Chapter {
   content: string;
 }
 
-const toolbarOptions = [
-  [{ header: [1, 2, 3, 4, 5, 6, false] }],
-  ["bold", "italic", "underline", "strike"],
-  [{ color: [] }, { background: [] }],
-  [{ align: [] }],
-  [{ list: "ordered" }, { list: "bullet" }],
-  ["blockquote", "code-block"],
-  ["link", "image", "video"],
-  ["clean"],
-];
-
-const FloatingToolbar = ({ onInsert }: { onInsert: (type: string) => void }) => {
+const FloatingToolbar = ({ onInsertImage, visible }: { onInsertImage: () => void; visible: boolean }) => {
+  if (!visible) return null;
+  
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg">
+    <div className="fixed left-4 transform -translate-y-1/2 flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg transition-opacity duration-200">
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => onInsert("image")}
+        onClick={onInsertImage}
         title="Insert Image"
       >
         <Image className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onInsert("table")}
-        title="Insert Table"
-      >
-        <Table className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onInsert("code-block")}
-        title="Insert Code Block"
-      >
-        <Code className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onInsert("page-break")}
-        title="Insert Page Break"
-      >
-        <Scissors className="h-4 w-4" />
       </Button>
     </div>
   );
@@ -93,13 +58,126 @@ export default function WritePage() {
   ]);
   const [activeChapter, setActiveChapter] = useState<string>("1");
   const [previewMode, setPreviewMode] = useState(false);
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
+  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState(0);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const editorInstanceRef = useRef<any>(null);
 
-  const handleQuillChange = (content: string) => {
-    setChapters((prev) =>
-      prev.map((ch) =>
-        ch.id === activeChapter ? { ...ch, content } : ch
-      )
-    );
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const MediumEditor = require("medium-editor");
+      if (editorRef.current && !editorInstanceRef.current) {
+        editorInstanceRef.current = new MediumEditor(editorRef.current, {
+          toolbar: {
+            buttons: [
+              "bold",
+              "italic",
+              "underline",
+              "anchor",
+              "h2",
+              "h3",
+              "quote",
+              "orderedlist",
+              "unorderedlist",
+            ],
+          },
+          placeholder: {
+            text: "Write your story...",
+          },
+        });
+
+        // Save content on change
+        editorInstanceRef.current.subscribe("editableInput", () => {
+          const content = editorInstanceRef.current.getContent();
+          setChapters((prev) =>
+            prev.map((ch) =>
+              ch.id === activeChapter ? { ...ch, content } : ch
+            )
+          );
+        });
+
+        // Handle cursor position changes
+        editorRef.current.addEventListener('keyup', handleCursorPosition);
+        editorRef.current.addEventListener('mouseup', handleCursorPosition);
+        editorRef.current.addEventListener('input', handleCursorPosition);
+      }
+    }
+
+    return () => {
+      if (editorInstanceRef.current) {
+        if (editorRef.current) {
+          editorRef.current.removeEventListener('keyup', handleCursorPosition);
+          editorRef.current.removeEventListener('mouseup', handleCursorPosition);
+          editorRef.current.removeEventListener('input', handleCursorPosition);
+        }
+        editorInstanceRef.current.destroy();
+        editorInstanceRef.current = null;
+      }
+    };
+  }, [activeChapter]);
+
+  useEffect(() => {
+    if (editorRef.current && editorInstanceRef.current) {
+      const currentChapter = chapters.find((ch) => ch.id === activeChapter);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = currentChapter?.content || "";
+      }
+    }
+  }, [activeChapter, chapters]);
+
+  const handleCursorPosition = () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const startContainer = range.startContainer;
+    
+    // Check if we're at the start of a new line or empty paragraph
+    const isNewLine = startContainer.nodeType === Node.TEXT_NODE && 
+      (startContainer.textContent?.length === 0 || 
+       range.startOffset === 0 ||
+       startContainer.textContent?.charAt(range.startOffset - 1) === '\n');
+
+    if (isNewLine) {
+      const rect = range.getBoundingClientRect();
+      setFloatingToolbarPosition(rect.top);
+      setShowFloatingToolbar(true);
+    } else {
+      setShowFloatingToolbar(false);
+    }
+  };
+
+  const handleImageUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.createElement("img");
+          img.src = e.target?.result as string;
+          img.className = "max-w-full h-auto my-4";
+          
+          if (editorInstanceRef.current) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount) {
+              const range = selection.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(img);
+              // Move cursor after image
+              range.setStartAfter(img);
+              range.setEndAfter(img);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
   };
 
   const addChapter = () => {
@@ -128,33 +206,6 @@ export default function WritePage() {
       title: "Draft saved",
       description: "Your story has been saved as a draft.",
     });
-  };
-
-  const handleFloatingToolbarAction = (type: string) => {
-    const quill = (document.querySelector(".quill") as any)?.getEditor();
-    if (!quill) return;
-
-    switch (type) {
-      case "image":
-        const url = prompt("Enter image URL:");
-        if (url) {
-          const range = quill.getSelection(true);
-          quill.insertEmbed(range.index, "image", url);
-        }
-        break;
-      case "table":
-        const range = quill.getSelection(true);
-        quill.insertText(range.index, "\n");
-        quill.insertText(range.index + 1, "| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Row 1    | Data     | Data     |\n");
-        break;
-      case "code-block":
-        quill.format("code-block", true);
-        break;
-      case "page-break":
-        const breakRange = quill.getSelection(true);
-        quill.insertText(breakRange.index, "\n---\n");
-        break;
-    }
   };
 
   return (
@@ -214,20 +265,17 @@ export default function WritePage() {
             </Button>
           </div>
 
-          <FloatingToolbar onInsert={handleFloatingToolbarAction} />
+          <FloatingToolbar 
+            onInsertImage={handleImageUpload} 
+            visible={showFloatingToolbar} 
+          />
 
           {!previewMode ? (
-            <div className="min-h-[500px] border rounded-lg">
-              <ReactQuill
-                theme="snow"
-                value={chapters.find((ch) => ch.id === activeChapter)?.content || ""}
-                onChange={handleQuillChange}
-                modules={{
-                  toolbar: toolbarOptions,
-                }}
-                className="h-[450px]"
-              />
-            </div>
+            <div 
+              ref={editorRef}
+              className="min-h-[500px] border rounded-lg p-4 prose dark:prose-invert max-w-none focus:outline-none"
+              style={{ position: 'relative' }}
+            />
           ) : (
             <div
               className="prose dark:prose-invert max-w-none min-h-[500px] border rounded-lg p-4"
