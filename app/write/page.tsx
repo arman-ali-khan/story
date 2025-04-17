@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Save, Eye, Image } from "lucide-react";
-import "medium-editor/dist/css/medium-editor.css";
-import "medium-editor/dist/css/themes/default.css";
+import { BookOpen, Save, Eye } from "lucide-react";
+import Editor from "./components/editor";
 
 const categories = [
   { value: "romance", label: "Romance" },
@@ -31,34 +30,6 @@ interface Chapter {
   content: string;
 }
 
-interface ToolbarPosition {
-  top: number;
-  left: number;
-}
-
-const FloatingToolbar = ({ onInsertImage, visible, position }: { onInsertImage: () => void; visible: boolean; position: ToolbarPosition }) => {
-  if (!visible) return null;
-  
-  return (
-    <div 
-      className="fixed transform flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg transition-opacity duration-200 z-50"
-      style={{ 
-        top: `${position.top}px`,
-        left: `${position.left}px`
-      }}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onInsertImage}
-        title="Insert Image"
-      >
-        <Image className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-};
-
 export default function WritePage() {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
@@ -69,145 +40,6 @@ export default function WritePage() {
   ]);
   const [activeChapter, setActiveChapter] = useState<string>("1");
   const [previewMode, setPreviewMode] = useState(false);
-  const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
-  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
-  const editorRef = useRef<HTMLDivElement>(null);
-  const editorInstanceRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const MediumEditor = require("medium-editor");
-      if (editorRef.current && !editorInstanceRef.current) {
-        editorInstanceRef.current = new MediumEditor(editorRef.current, {
-          toolbar: {
-            buttons: [
-              "bold",
-              "italic",
-              "underline",
-              "anchor",
-              "h2",
-              "h3",
-              "quote",
-              "orderedlist",
-              "unorderedlist",
-            ],
-          },
-          placeholder: {
-            text: "Write your story...",
-          },
-        });
-
-        // Save content on change
-        editorInstanceRef.current.subscribe("editableInput", () => {
-          const content = editorInstanceRef.current.getContent();
-          setChapters((prev) =>
-            prev.map((ch) =>
-              ch.id === activeChapter ? { ...ch, content } : ch
-            )
-          );
-        });
-
-        // Handle cursor position changes
-        editorRef.current.addEventListener('keyup', handleKeyUp);
-        editorRef.current.addEventListener('mouseup', handleCursorPosition);
-        editorRef.current.addEventListener('input', handleCursorPosition);
-      }
-    }
-
-    return () => {
-      if (editorInstanceRef.current) {
-        if (editorRef.current) {
-          editorRef.current.removeEventListener('keyup', handleKeyUp);
-          editorRef.current.removeEventListener('mouseup', handleCursorPosition);
-          editorRef.current.removeEventListener('input', handleCursorPosition);
-        }
-        editorInstanceRef.current.destroy();
-        editorInstanceRef.current = null;
-      }
-    };
-  }, [activeChapter]);
-
-  useEffect(() => {
-    if (editorRef.current && editorInstanceRef.current) {
-      const currentChapter = chapters.find((ch) => ch.id === activeChapter);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = currentChapter?.content || "";
-      }
-    }
-  }, [activeChapter, chapters]);
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleCursorPosition();
-    }
-  };
-
-  const handleCursorPosition = () => {
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
-
-    const range = selection.getRangeAt(0);
-    const startContainer = range.startContainer;
-    
-    // Check if we're at the start of a new line or empty paragraph
-    const isNewLine = startContainer.nodeType === Node.TEXT_NODE && 
-      (startContainer.textContent?.length === 0 || 
-       range.startOffset === 0 ||
-       startContainer.textContent?.charAt(range.startOffset - 1) === '\n');
-
-    // Also check for empty paragraphs
-    const isEmptyParagraph = startContainer.nodeType === Node.ELEMENT_NODE &&
-      (startContainer as Element).tagName === 'P' &&
-      (!startContainer.textContent || startContainer.textContent.trim() === '');
-
-    if (isNewLine || isEmptyParagraph) {
-      const rect = range.getBoundingClientRect();
-      const editorRect = editorRef.current?.getBoundingClientRect();
-      
-      if (editorRect) {
-        setFloatingToolbarPosition({
-          top: rect.top + window.scrollY,
-          left: Math.max(editorRect.left, rect.left - 40) // Position 40px to the left of cursor
-        });
-        setShowFloatingToolbar(true);
-      }
-    } else {
-      setShowFloatingToolbar(false);
-    }
-  };
-
-  const handleImageUpload = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e: any) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.createElement("img");
-          img.src = e.target?.result as string;
-          img.className = "max-w-full h-auto my-4";
-          
-          if (editorInstanceRef.current) {
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount) {
-              const range = selection.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(img);
-              // Move cursor after image
-              range.setStartAfter(img);
-              range.setEndAfter(img);
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-    input.click();
-  };
 
   const addChapter = () => {
     const newChapter = {
@@ -223,6 +55,14 @@ export default function WritePage() {
     setActiveChapter(chapterId);
   };
 
+  const handleContentChange = (content: string) => {
+    setChapters((prev) =>
+      prev.map((ch) =>
+        ch.id === activeChapter ? { ...ch, content } : ch
+      )
+    );
+  };
+
   const handlePublish = async () => {
     toast({
       title: "Story published",
@@ -236,6 +76,8 @@ export default function WritePage() {
       description: "Your story has been saved as a draft.",
     });
   };
+
+  const currentChapter = chapters.find((ch) => ch.id === activeChapter);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -294,23 +136,16 @@ export default function WritePage() {
             </Button>
           </div>
 
-          <FloatingToolbar 
-            onInsertImage={handleImageUpload} 
-            visible={showFloatingToolbar} 
-            position={floatingToolbarPosition}
-          />
-
           {!previewMode ? (
-            <div 
-              ref={editorRef}
-              className="min-h-[500px] border rounded-lg p-4 prose dark:prose-invert max-w-none focus:outline-none"
-              style={{ position: 'relative' }}
+            <Editor 
+              content={currentChapter?.content || ""} 
+              onChange={handleContentChange}
             />
           ) : (
             <div
               className="prose dark:prose-invert max-w-none min-h-[500px] border rounded-lg p-4"
               dangerouslySetInnerHTML={{
-                __html: chapters.find((ch) => ch.id === activeChapter)?.content || "",
+                __html: currentChapter?.content || "",
               }}
             />
           )}
