@@ -31,11 +31,22 @@ interface Chapter {
   content: string;
 }
 
-const FloatingToolbar = ({ onInsertImage, visible }: { onInsertImage: () => void; visible: boolean }) => {
+interface ToolbarPosition {
+  top: number;
+  left: number;
+}
+
+const FloatingToolbar = ({ onInsertImage, visible, position }: { onInsertImage: () => void; visible: boolean; position: ToolbarPosition }) => {
   if (!visible) return null;
   
   return (
-    <div className="fixed left-4 transform -translate-y-1/2 flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg transition-opacity duration-200">
+    <div 
+      className="fixed transform flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg transition-opacity duration-200 z-50"
+      style={{ 
+        top: `${position.top}px`,
+        left: `${position.left}px`
+      }}
+    >
       <Button
         variant="ghost"
         size="icon"
@@ -59,7 +70,7 @@ export default function WritePage() {
   const [activeChapter, setActiveChapter] = useState<string>("1");
   const [previewMode, setPreviewMode] = useState(false);
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(false);
-  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState(0);
+  const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<ToolbarPosition>({ top: 0, left: 0 });
   const editorRef = useRef<HTMLDivElement>(null);
   const editorInstanceRef = useRef<any>(null);
 
@@ -97,7 +108,7 @@ export default function WritePage() {
         });
 
         // Handle cursor position changes
-        editorRef.current.addEventListener('keyup', handleCursorPosition);
+        editorRef.current.addEventListener('keyup', handleKeyUp);
         editorRef.current.addEventListener('mouseup', handleCursorPosition);
         editorRef.current.addEventListener('input', handleCursorPosition);
       }
@@ -106,7 +117,7 @@ export default function WritePage() {
     return () => {
       if (editorInstanceRef.current) {
         if (editorRef.current) {
-          editorRef.current.removeEventListener('keyup', handleCursorPosition);
+          editorRef.current.removeEventListener('keyup', handleKeyUp);
           editorRef.current.removeEventListener('mouseup', handleCursorPosition);
           editorRef.current.removeEventListener('input', handleCursorPosition);
         }
@@ -125,6 +136,12 @@ export default function WritePage() {
     }
   }, [activeChapter, chapters]);
 
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCursorPosition();
+    }
+  };
+
   const handleCursorPosition = () => {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
@@ -138,10 +155,22 @@ export default function WritePage() {
        range.startOffset === 0 ||
        startContainer.textContent?.charAt(range.startOffset - 1) === '\n');
 
-    if (isNewLine) {
+    // Also check for empty paragraphs
+    const isEmptyParagraph = startContainer.nodeType === Node.ELEMENT_NODE &&
+      (startContainer as Element).tagName === 'P' &&
+      (!startContainer.textContent || startContainer.textContent.trim() === '');
+
+    if (isNewLine || isEmptyParagraph) {
       const rect = range.getBoundingClientRect();
-      setFloatingToolbarPosition(rect.top);
-      setShowFloatingToolbar(true);
+      const editorRect = editorRef.current?.getBoundingClientRect();
+      
+      if (editorRect) {
+        setFloatingToolbarPosition({
+          top: rect.top + window.scrollY,
+          left: Math.max(editorRect.left, rect.left - 40) // Position 40px to the left of cursor
+        });
+        setShowFloatingToolbar(true);
+      }
     } else {
       setShowFloatingToolbar(false);
     }
@@ -268,6 +297,7 @@ export default function WritePage() {
           <FloatingToolbar 
             onInsertImage={handleImageUpload} 
             visible={showFloatingToolbar} 
+            position={floatingToolbarPosition}
           />
 
           {!previewMode ? (
