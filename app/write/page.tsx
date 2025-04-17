@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Save, Eye } from "lucide-react";
+import { BookOpen, Save, Eye, Image, Table, Code, Scissors } from "lucide-react";
+import "react-quill/dist/quill.snow.css";
+
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
 const categories = [
   { value: "romance", label: "Romance" },
@@ -31,6 +33,56 @@ interface Chapter {
   content: string;
 }
 
+const toolbarOptions = [
+  [{ header: [1, 2, 3, 4, 5, 6, false] }],
+  ["bold", "italic", "underline", "strike"],
+  [{ color: [] }, { background: [] }],
+  [{ align: [] }],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["blockquote", "code-block"],
+  ["link", "image", "video"],
+  ["clean"],
+];
+
+const FloatingToolbar = ({ onInsert }: { onInsert: (type: string) => void }) => {
+  return (
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 bg-background border rounded-lg p-2 shadow-lg">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onInsert("image")}
+        title="Insert Image"
+      >
+        <Image className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onInsert("table")}
+        title="Insert Table"
+      >
+        <Table className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onInsert("code-block")}
+        title="Insert Code Block"
+      >
+        <Code className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onInsert("page-break")}
+        title="Insert Page Break"
+      >
+        <Scissors className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
 export default function WritePage() {
   const { toast } = useToast();
   const [title, setTitle] = useState("");
@@ -42,18 +94,13 @@ export default function WritePage() {
   const [activeChapter, setActiveChapter] = useState<string>("1");
   const [previewMode, setPreviewMode] = useState(false);
 
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: "",
-    onUpdate: ({ editor }) => {
-      const content = editor.getHTML();
-      setChapters((prev) =>
-        prev.map((ch) =>
-          ch.id === activeChapter ? { ...ch, content } : ch
-        )
-      );
-    },
-  });
+  const handleQuillChange = (content: string) => {
+    setChapters((prev) =>
+      prev.map((ch) =>
+        ch.id === activeChapter ? { ...ch, content } : ch
+      )
+    );
+  };
 
   const addChapter = () => {
     const newChapter = {
@@ -63,15 +110,10 @@ export default function WritePage() {
     };
     setChapters([...chapters, newChapter]);
     setActiveChapter(newChapter.id);
-    editor?.commands.setContent("");
   };
 
   const switchChapter = (chapterId: string) => {
-    const chapter = chapters.find((ch) => ch.id === chapterId);
-    if (chapter) {
-      setActiveChapter(chapterId);
-      editor?.commands.setContent(chapter.content);
-    }
+    setActiveChapter(chapterId);
   };
 
   const handlePublish = async () => {
@@ -86,6 +128,33 @@ export default function WritePage() {
       title: "Draft saved",
       description: "Your story has been saved as a draft.",
     });
+  };
+
+  const handleFloatingToolbarAction = (type: string) => {
+    const quill = (document.querySelector(".quill") as any)?.getEditor();
+    if (!quill) return;
+
+    switch (type) {
+      case "image":
+        const url = prompt("Enter image URL:");
+        if (url) {
+          const range = quill.getSelection(true);
+          quill.insertEmbed(range.index, "image", url);
+        }
+        break;
+      case "table":
+        const range = quill.getSelection(true);
+        quill.insertText(range.index, "\n");
+        quill.insertText(range.index + 1, "| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Row 1    | Data     | Data     |\n");
+        break;
+      case "code-block":
+        quill.format("code-block", true);
+        break;
+      case "page-break":
+        const breakRange = quill.getSelection(true);
+        quill.insertText(breakRange.index, "\n---\n");
+        break;
+    }
   };
 
   return (
@@ -145,9 +214,19 @@ export default function WritePage() {
             </Button>
           </div>
 
+          <FloatingToolbar onInsert={handleFloatingToolbarAction} />
+
           {!previewMode ? (
-            <div className="min-h-[500px] border rounded-lg p-4">
-              <EditorContent editor={editor} />
+            <div className="min-h-[500px] border rounded-lg">
+              <ReactQuill
+                theme="snow"
+                value={chapters.find((ch) => ch.id === activeChapter)?.content || ""}
+                onChange={handleQuillChange}
+                modules={{
+                  toolbar: toolbarOptions,
+                }}
+                className="h-[450px]"
+              />
             </div>
           ) : (
             <div
