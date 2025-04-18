@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -12,8 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Save, Eye } from "lucide-react";
+import { BookOpen, Save, Eye, ImageIcon } from "lucide-react";
 import Editor from "./components/editor";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const categories = [
   { value: "romance", label: "Romance" },
@@ -40,15 +42,35 @@ export default function WritePage() {
   ]);
   const [activeChapter, setActiveChapter] = useState<string>("1");
   const [previewMode, setPreviewMode] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [newChapterTitle, setNewChapterTitle] = useState("");
+  const [showChapterInput, setShowChapterInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addChapter = () => {
+    if (!showChapterInput) {
+      setShowChapterInput(true);
+      return;
+    }
+
+    if (!newChapterTitle.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Chapter title required",
+        description: "Please enter a title for the new chapter",
+      });
+      return;
+    }
+
     const newChapter = {
       id: (chapters.length + 1).toString(),
-      title: `Chapter ${chapters.length + 1}`,
+      title: newChapterTitle,
       content: "",
     };
     setChapters([...chapters, newChapter]);
     setActiveChapter(newChapter.id);
+    setNewChapterTitle("");
+    setShowChapterInput(false);
   };
 
   const switchChapter = (chapterId: string) => {
@@ -75,6 +97,17 @@ export default function WritePage() {
       title: "Draft saved",
       description: "Your story has been saved as a draft.",
     });
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const currentChapter = chapters.find((ch) => ch.id === activeChapter);
@@ -113,27 +146,60 @@ export default function WritePage() {
 
           <div>
             <Label htmlFor="description">Description</Label>
-            <Input
+            <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of your story"
+              placeholder="Brief description of your story (Min 3 or 4 line)"
+              className="overflow-hidden min-h-[40px] h-9"
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "0px";
+                target.style.height = `${target.scrollHeight}px`;
+              }}
             />
           </div>
 
-          <div className="flex space-x-2 overflow-x-auto pb-2">
-            {chapters.map((chapter) => (
-              <Button
-                key={chapter.id}
-                variant={activeChapter === chapter.id ? "default" : "outline"}
-                onClick={() => switchChapter(chapter.id)}
-              >
-                {chapter.title}
+          <div className="space-y-2">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
+              {chapters.map((chapter) => (
+                <Button
+                  key={chapter.id}
+                  variant={activeChapter === chapter.id ? "default" : "outline"}
+                  onClick={() => switchChapter(chapter.id)}
+                >
+                  {chapter.title}
+                </Button>
+              ))}
+              <Button variant="outline" onClick={addChapter}>
+                + Add Chapter
               </Button>
-            ))}
-            <Button variant="outline" onClick={addChapter}>
-              + Add Chapter
-            </Button>
+            </div>
+            
+            {showChapterInput && (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newChapterTitle}
+                  onChange={(e) => setNewChapterTitle(e.target.value)}
+                  placeholder="Enter chapter title"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      addChapter();
+                    }
+                  }}
+                />
+                <Button onClick={addChapter}>Add</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowChapterInput(false);
+                    setNewChapterTitle("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
 
           {!previewMode ? (
@@ -151,18 +217,49 @@ export default function WritePage() {
           )}
         </div>
 
-        <div className="space-y-4">
-          <div>
+        <div className="space-y-6">
+          <div className="border rounded-lg p-4 space-y-4">
+            <Label>Cover Image</Label>
+            <div className="relative w-full aspect-[2/1] h-[400px] overflow-hidden rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-800">
+              {coverImage ? (
+                <img
+                  src={coverImage}
+                  alt="Cover preview"
+                  className="w-[300px] h-[400px] object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <ImageIcon className="w-8 h-8 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">300 x 400 recommended</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden h-[400px]"
+              />
+              <Button
+                variant="ghost"
+                className="absolute inset-0 w-full h-[400px] opacity-0 hover:opacity-100 bg-black/50 text-white transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Change Cover
+              </Button>
+            </div>
+          </div>
+
+          <div className="border rounded-lg p-4 space-y-4">
             <Label>Categories</Label>
             <div className="space-y-2">
               {categories.map((category) => (
                 <div key={category.value} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id={category.value}
                     checked={selectedCategories.includes(category.value)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                    onCheckedChange={(checked) => {
+                      if (checked) {
                         setSelectedCategories([...selectedCategories, category.value]);
                       } else {
                         setSelectedCategories(
@@ -170,7 +267,6 @@ export default function WritePage() {
                         );
                       }
                     }}
-                    className="h-4 w-4"
                   />
                   <Label htmlFor={category.value}>{category.label}</Label>
                 </div>
@@ -178,7 +274,7 @@ export default function WritePage() {
             </div>
           </div>
 
-          <div>
+          <div className="border rounded-lg p-4">
             <Label>Language</Label>
             <Select defaultValue="bn">
               <SelectTrigger>
