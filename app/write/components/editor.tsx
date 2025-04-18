@@ -26,7 +26,6 @@ export default function Editor({ content, onChange }: EditorProps) {
       [{ 'script': 'sub'}, { 'script': 'super' }],
       ['blockquote', 'code-block'],
       [{ 'align': ['', 'center', 'right', 'justify'] }],
-      ['table'],
       ['clean']
     ]
   };
@@ -38,26 +37,26 @@ export default function Editor({ content, onChange }: EditorProps) {
     'script',
     'blockquote', 'code-block',
     'align',
-    'table'
   ];
 
   if (!mounted) {
     return (
-      <div className="min-h-[500px] border rounded-lg p-4 prose dark:prose-invert max-w-none text-lg">
+      <div className="min-h-[300px] max-h-[600px] overflow-y-auto border rounded-lg p-4 prose dark:prose-invert max-w-none text-lg">
         Loading editor...
       </div>
     );
   }
 
   return (
-    <div className="min-h-[500px] border rounded-lg prose dark:prose-invert max-w-none">
+    <div className="min-h-[300px] max-h-[600px] border rounded-lg prose dark:prose-invert max-w-none">
       <ReactQuill
+        placeholder="Start writing your story..."
         theme="bubble"
         value={content}
         onChange={onChange}
         modules={modules}
         formats={formats}
-        className="min-h-[500px] focus:outline-none text-lg [&_.ql-editor]:text-lg"
+        className="min-h-[300px] max-h-[600px] overflow-y-auto focus:outline-none text-lg [&_.ql-editor]:text-lg [&_.ql-editor]:min-h-[300px] [&_.ql-editor]:max-h-[600px]"
       />
     </div>
   );
