@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/db";
 import User from "@/lib/models/user";
 
-// Remove any dynamic = "error" export and let Next.js handle the rendering strategy
 export async function POST(req: Request) {
   try {
     const { name, email, password } = await req.json();
@@ -34,6 +33,7 @@ export async function POST(req: Request) {
       name,
       email,
       password: hashedPassword,
+      role: 'reader', // Default role
     });
 
     // Remove password from response
