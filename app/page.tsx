@@ -9,26 +9,48 @@ const mockStories = [
     id: "1",
     title: "The Hidden Moon",
     coverImage: "https://images.unsplash.com/photo-1744315900478-fa44dc6a4e89?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyfHx8ZW58MHx8fHx8",
+    chapters: [
+      { id: "ch1", title: "The Beginning" },
+      { id: "ch2", title: "Unexpected Turn" },
+      { id: "ch3", title: "Revelations" },
+    ]
   },
   {
     id: "2",
     title: "River of Dreams",
     coverImage: "https://images.unsplash.com/photo-1744424705160-b12b262cda22?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwzfHx8ZW58MHx8fHx8",
+    chapters: [
+      { id: "ch1", title: "Prologue" },
+      { id: "ch2", title: "The Journey Begins" },
+    ]
   },
   {
     id: "3",
     title: "The Last Sunset",
     coverImage: "https://images.unsplash.com/photo-1744762561513-6691932920fb?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxNXx8fGVufDB8fHx8fA%3D%3D",
+    chapters: [
+      { id: "ch1", title: "Dawn" },
+      { id: "ch2", title: "Dusk" },
+      { id: "ch3", title: "Night Falls" },
+    ]
   },
   {
     id: "4",
     title: "Mountain Tales",
     coverImage: "https://images.unsplash.com/photo-1744140390489-fc279d403107?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHw0fHx8ZW58MHx8fHx8",
+    chapters: [
+      { id: "ch1", title: "The Climb" },
+      { id: "ch2", title: "Summit" },
+    ]
   },
   {
     id: "5",
     title: "Ocean Whispers",
     coverImage: "https://images.unsplash.com/photo-1744360817731-c02ab9b95854?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHw3fHx8ZW58MHx8fHx8",
+    chapters: [
+      { id: "ch1", title: "Waves" },
+      { id: "ch2", title: "Deep Waters" },
+    ]
   },
 ];
 
