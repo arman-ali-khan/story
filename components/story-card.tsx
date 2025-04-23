@@ -50,7 +50,7 @@ export function StoryCard({
           loading="lazy"
         />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
-          <Link href={`/story/${id}`}>
+          <Link href={`/story/${id}/chapters`}>
             <h3 className="text-white font-semibold text-sm sm:text-base line-clamp-2 mb-2">
               {title}
             </h3>

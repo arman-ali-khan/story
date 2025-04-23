@@ -65,13 +65,66 @@ export default function ChaptersPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
         {/* Main Content */}
         <div className="md:col-span-2 space-y-6">
           <div className="prose dark:prose-invert max-w-none">
             <h1 className="text-3xl font-bold mb-4">{mockStory.title}</h1>
             <p className="text-muted-foreground">{mockStory.description}</p>
           </div>
+    {/* Sidebar */}
+        <div className="space-y-6 md:hidden ">
+          {/* Cover Image */}
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border">
+            <Image
+              src={mockStory.coverImage}
+              alt={mockStory.title}
+              fill
+              className="object-cover"
+            />
+          </div>
 
+          {/* Rating */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`h-5 w-5 ${
+                    i < Math.floor(mockStory.rating)
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="font-semibold">{mockStory.rating}</span>
+            <span className="text-muted-foreground">({mockStory.reviewCount} reviews)</span>
+          </div>
+
+          {/* Author Card */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={mockStory.author.image} />
+                  <AvatarFallback>{mockStory.author.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div>
+                    <h3 className="font-semibold">{mockStory.author.name}</h3>
+                    <Badge variant="secondary" className="mt-1">
+                      {mockStory.author.level}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {mockStory.author.followers.toLocaleString()} followers
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
           {/* Interaction Stats */}
           <div className="flex items-center gap-6 py-4">
             <Button 
@@ -91,6 +144,7 @@ export default function ChaptersPage() {
           {/* Chapter List */}
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold">Chapters</h2>
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {mockStory.chapters.map((chapter) => (
               <ChapterCard
                 key={chapter.id}
@@ -104,11 +158,12 @@ export default function ChaptersPage() {
                 onToggleFavorite={() => toggleFavorite(chapter.id)}
               />
             ))}
+         </div>
           </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-6 hidden md:block">
           {/* Cover Image */}
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border">
             <Image
