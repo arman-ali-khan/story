@@ -20,6 +20,12 @@ export default function Navbar() {
           <Link href="/explore">
             <Button variant="ghost">Explore</Button>
           </Link>
+          <Link href="/auth/signin">
+            <Button variant="ghost">Sign In</Button>
+          </Link>
+          <Link href="/auth/signup">
+            <Button variant="ghost">Sign Up</Button>
+          </Link>
           <Link href="/write">
             <Button>
               <PenLine className="mr-2 h-4 w-4" />

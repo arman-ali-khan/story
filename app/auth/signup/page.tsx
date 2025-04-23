@@ -90,7 +90,6 @@ export default function SignUp() {
           <Button
             className="w-full"
             type="submit"
-            disabled={loading}
           >
             {loading ? "Creating account..." : "Create Account"}
           </Button>
