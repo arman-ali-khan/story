@@ -5,10 +5,12 @@ import User from "@/lib/models/user";
 
 export async function POST(req: Request) {
   try {
-
     const { name, email, password } = await req.json();
-  console.log(name,'name')
+    console.log('Connecting to database...');
+    
     await dbConnect();
+    console.log('Database connected successfully');
+
     // Validate input
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
 
     // Check if user already exists
     const existingUser = await User.findOne({ email }).select('_id');
-    
+   
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: "Email already registered" },
