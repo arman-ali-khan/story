@@ -5,10 +5,10 @@ import User from "@/lib/models/user";
 
 export async function POST(req: Request) {
   try {
-    await dbConnect();
 
     const { name, email, password } = await req.json();
-
+  console.log(name,'name')
+    await dbConnect();
     // Validate input
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     console.error("Signup error:", error);
     
     // Check for MongoDB duplicate key error
-    if (error.code === 11000) {
+    if ((error as any).code === 11000) {
       return NextResponse.json(
         { success: false, error: "Email already registered" },
         { status: 400 }
