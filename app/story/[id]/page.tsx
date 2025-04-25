@@ -30,9 +30,9 @@ const mockStory = {
     followers: 1234
   },
   chapters: [
-    { id: "ch1", title: "The Beginning" },
-    { id: "ch2", title: "Unexpected Turn" },
-    { id: "ch3", title: "Revelations" },
+    { id: "ch1", title: "The Beginning", views: 1200, rating: 4.5 },
+    { id: "ch2", title: "Unexpected Turn", views: 980, rating: 4.2 },
+    { id: "ch3", title: "Revelations", views: 850, rating: 4.7 },
   ]
 };
 
@@ -46,25 +46,6 @@ export default function StoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="md:col-span-2 space-y-6">
-          {/* Chapter Navigation */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-3">Chapters</h3>
-              <div className="space-y-2">
-                {mockStory.chapters.map((chapter) => (
-                  <Link 
-                    key={chapter.id}
-                    href={`/story/${mockStory.id}/chapter/${chapter.id}`}
-                    className="block p-2 hover:bg-accent rounded-md transition-colors"
-                  >
-                    {chapter.title}
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Story Content */}
           <div className="prose dark:prose-invert max-w-none">
             <h1 className="text-3xl font-bold mb-4">{mockStory.title}</h1>
             <p className="text-muted-foreground">{mockStory.description}</p>
@@ -99,6 +80,37 @@ export default function StoryPage() {
                 <Reviews storyId={mockStory.id} />
               </DrawerContent>
             </Drawer>
+          </div>
+
+          {/* Chapters List */}
+          <div className="block md:hidden">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-3">Chapters</h3>
+                <div className="space-y-2">
+                  {mockStory.chapters.map((chapter) => (
+                    <Link 
+                      key={chapter.id}
+                      href={`/story/${mockStory.id}/chapter/${chapter.id}`}
+                      className="block"
+                    >
+                      <div className="p-2 hover:bg-accent rounded-md transition-colors">
+                        <div className="flex justify-between items-center">
+                          <span>{chapter.title}</span>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center">
+                              <Star className="mr-1 h-4 w-4 text-yellow-400" />
+                              {chapter.rating.toFixed(1)}
+                            </div>
+                            <div>{chapter.views.toLocaleString()} views</div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -163,6 +175,37 @@ export default function StoryPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Chapters List (Desktop) */}
+          <div className="hidden md:block">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-3">Chapters</h3>
+                <div className="space-y-2">
+                  {mockStory.chapters.map((chapter) => (
+                    <Link 
+                      key={chapter.id}
+                      href={`/story/${mockStory.id}/chapter/${chapter.id}`}
+                      className="block"
+                    >
+                      <div className="p-2 hover:bg-accent rounded-md transition-colors">
+                        <div className="flex justify-between items-center">
+                          <span>{chapter.title}</span>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center">
+                              <Star className="mr-1 h-4 w-4 text-yellow-400" />
+                              {chapter.rating.toFixed(1)}
+                            </div>
+                            <div>{chapter.views.toLocaleString()} views</div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
