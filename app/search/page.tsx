@@ -76,8 +76,8 @@ export default function SearchPage() {
     categories: [],
     genres: [],
     tags: [],
-    year: "",
-    month: "",
+    year: "any",
+    month: "any",
   });
 
   const years = Array.from({ length: 5 }, (_, i) => 
@@ -114,8 +114,8 @@ export default function SearchPage() {
       categories: [],
       genres: [],
       tags: [],
-      year: "",
-      month: "",
+      year: "any",
+      month: "any",
     });
   };
 
@@ -129,8 +129,8 @@ export default function SearchPage() {
     const matchesTags = filters.tags.length === 0 || story.tags.some(tag => filters.tags.includes(tag));
     
     const storyDate = new Date(story.createdAt);
-    const matchesYear = !filters.year || storyDate.getFullYear().toString() === filters.year;
-    const matchesMonth = !filters.month || (storyDate.getMonth() + 1).toString().padStart(2, '0') === filters.month;
+    const matchesYear = filters.year === "any" || storyDate.getFullYear().toString() === filters.year;
+    const matchesMonth = filters.month === "any" || (storyDate.getMonth() + 1).toString().padStart(2, '0') === filters.month;
 
     return matchesSearch && matchesAuthor && matchesCategory && matchesGenre && matchesTags && matchesYear && matchesMonth;
   });
@@ -180,7 +180,7 @@ export default function SearchPage() {
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any Year</SelectItem>
+                        <SelectItem value="any">Any Year</SelectItem>
                         {years.map(year => (
                           <SelectItem key={year} value={year}>{year}</SelectItem>
                         ))}
@@ -194,7 +194,7 @@ export default function SearchPage() {
                         <SelectValue placeholder="Month" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Any Month</SelectItem>
+                        <SelectItem value="any">Any Month</SelectItem>
                         {months.map(month => (
                           <SelectItem key={month.value} value={month.value}>
                             {month.label}
@@ -335,20 +335,20 @@ export default function SearchPage() {
               {tag} ×
             </Badge>
           ))}
-          {filters.year && (
+          {filters.year !== "any" && (
             <Badge
               variant="secondary"
               className="cursor-pointer"
-              onClick={() => setFilters(prev => ({ ...prev, year: "" }))}
+              onClick={() => setFilters(prev => ({ ...prev, year: "any" }))}
             >
               {filters.year} ×
             </Badge>
           )}
-          {filters.month && (
+          {filters.month !== "any" && (
             <Badge
               variant="secondary"
               className="cursor-pointer"
-              onClick={() => setFilters(prev => ({ ...prev, month: "" }))}
+              onClick={() => setFilters(prev => ({ ...prev, month: "any" }))}
             >
               {months.find(m => m.value === filters.month)?.label} ×
             </Badge>

@@ -27,12 +27,22 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: true,
+      serverApi: { 
+        version: '1', 
+        strict: true, 
+        deprecationErrors: true 
+      }
     };
 
     try {
       cached.promise = mongoose.connect(MONGODB_URI, opts);
       cached.conn = await cached.promise;
       console.log('Successfully connected to MongoDB');
+      
+      // Ping the deployment
+      await mongoose.connection.db.admin().command({ ping: 1 });
+      console.log("Pinged your deployment. You successfully connected to MongoDB!");
+      
       return cached.conn;
     } catch (error) {
       cached.promise = null;
