@@ -1,8 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import dbConnect from "@/lib/db";
-import User from "@/lib/models/user";
+import { query } from "@/lib/db";
 
 const handler = NextAuth({
   providers: [
@@ -17,9 +16,12 @@ const handler = NextAuth({
           throw new Error('Please enter an email and password');
         }
 
-        await dbConnect();
+        const users = await query(
+          'SELECT * FROM users WHERE email = ?',
+          [credentials.email.toLowerCase().trim()]
+        ) as any[];
 
-        const user = await User.findOne({ email: credentials.email.toLowerCase().trim() });
+        const user = users[0];
 
         if (!user) {
           throw new Error('No user found with this email');
@@ -32,7 +34,7 @@ const handler = NextAuth({
         }
 
         return {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
