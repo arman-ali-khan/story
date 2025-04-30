@@ -51,7 +51,8 @@ export async function POST(req: Request) {
     // Create new user
     const userId = uuidv4();
     await query(
-      'INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)',
+      `INSERT INTO users (id, name, email, password, role, created_at) 
+       VALUES (?, ?, ?, ?, ?, NOW())`,
       [userId, name.trim(), email.toLowerCase().trim(), hashedPassword, 'reader']
     );
 

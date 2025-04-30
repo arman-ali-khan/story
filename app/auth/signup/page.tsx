@@ -11,23 +11,26 @@ export default function SignUp() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(event.currentTarget);
-    const data = {
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    };
-
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
       const result = await response.json();
@@ -65,6 +68,8 @@ export default function SignUp() {
             <Input
               name="name"
               placeholder="Name"
+              value={formData.name}
+              onChange={handleChange}
               required
               disabled={loading}
             />
@@ -74,6 +79,8 @@ export default function SignUp() {
               name="email"
               placeholder="Email"
               type="email"
+              value={formData.email}
+              onChange={handleChange}
               required
               disabled={loading}
             />
@@ -83,6 +90,8 @@ export default function SignUp() {
               name="password"
               placeholder="Password"
               type="password"
+              value={formData.password}
+              onChange={handleChange}
               required
               disabled={loading}
             />
@@ -90,6 +99,7 @@ export default function SignUp() {
           <Button
             className="w-full"
             type="submit"
+            disabled={loading}
           >
             {loading ? "Creating account..." : "Create Account"}
           </Button>
