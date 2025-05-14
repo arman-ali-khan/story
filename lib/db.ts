@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
 
-const MAX_RETRIES = 5; // Increased from 3 to 5
-const RETRY_DELAY = 5000; // Increased from 2000ms to 5000ms
+const MAX_RETRIES = 7;
+const INITIAL_RETRY_DELAY = 3000;
 
 const createPool = () => mysql.createPool({
   host: process.env.DB_HOST || 'db4free.net',
@@ -9,43 +9,23 @@ const createPool = () => mysql.createPool({
   password: process.env.DB_PASSWORD || 'Samrat726728',
   database: process.env.DB_NAME || 'bhoot_top',
   waitForConnections: true,
-  connectionLimit: 3, // Reduced from 5 to 3 to prevent overwhelming the free tier
-  queueLimit: 0,
-  connectTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '120000'), // Increased from 60000 to 120000
+  connectionLimit: 1,
+  queueLimit: 5,
+  connectTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '300000'),
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
+  keepAliveInitialDelay: 10000,
   multipleStatements: true,
-  // Added additional connection configurations for better stability
-  acquireTimeout: 30000,
-  timezone: 'Z',
-  dateStrings: true
+  maxIdle: 1,
+  idleTimeout: 60000
 });
 
-let pool: any = null;
-
-// Initialize pool with retry mechanism
-async function initializePool(retries = MAX_RETRIES): Promise<any> {
-  try {
-    if (!pool) {
-      pool = createPool();
-    }
-    return pool;
-  } catch (error) {
-    console.error('Failed to initialize connection pool:', error);
-    if (retries > 0) {
-      console.log(`Retrying pool initialization in ${RETRY_DELAY}ms... (${retries} retries remaining)`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return initializePool(retries - 1);
-    }
-    throw error;
-  }
-}
+const pool = createPool();
 
 async function queryWithRetry(sql: string, params: any[] = [], retries = MAX_RETRIES): Promise<any> {
   try {
-    // Ensure pool is initialized
-    const currentPool = await initializePool();
-    const [results] = await currentPool.execute(sql, params);
+    console.log('Executing database query...');
+    const [results] = await pool.execute(sql, params);
+    console.log('Query executed successfully');
     return results;
   } catch (error: any) {
     console.error('Database query error:', {
@@ -54,63 +34,48 @@ async function queryWithRetry(sql: string, params: any[] = [], retries = MAX_RET
       sql: error.sql,
       sqlState: error.sqlState,
       sqlMessage: error.sqlMessage,
-      remainingRetries: retries,
-      stack: error.stack // Added stack trace for better debugging
+      remainingRetries: retries
     });
 
-    // Handle various error types
-    if (retries > 0 && (
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'PROTOCOL_CONNECTION_LOST' ||
-      error.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR'
-    )) {
-      console.log(`Retrying query in ${RETRY_DELAY}ms... (${retries} retries remaining)`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    const retryableErrors = ['ETIMEDOUT', 'ECONNREFUSED', 'PROTOCOL_CONNECTION_LOST', 'ECONNRESET'];
+    
+    if (retries > 0 && retryableErrors.includes(error.code)) {
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
+      const maxDelay = 30000;
+      const actualDelay = Math.min(delay, maxDelay);
       
-      // Reset pool on connection errors
-      if (error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR') {
-        pool = null;
-      }
-      
+      console.log(`Retrying query in ${actualDelay}ms... (${retries} retries remaining)`);
+      await new Promise(resolve => setTimeout(resolve, actualDelay));
       return queryWithRetry(sql, params, retries - 1);
     }
 
     if (error.code === 'ETIMEDOUT') {
-      throw new Error('Database connection timed out. The database server might be experiencing high load or connectivity issues. Please try again later.');
+      throw new Error('Database connection timed out. Please try again later.');
     }
     throw error;
   }
 }
 
-// Enhanced connection test with detailed error reporting
 async function testConnection(retries = MAX_RETRIES) {
   try {
-    const currentPool = await initializePool();
-    const connection = await currentPool.getConnection();
-    
-    // Test the connection with a simple query
-    await connection.query('SELECT 1');
-    console.log('Database connection established and verified successfully');
+    console.log('Establishing database connection...');
+    const connection = await pool.getConnection();
+    console.log('✓ Database connection established successfully');
     connection.release();
-  } catch (err: any) {
-    console.error('Failed to establish database connection:', {
-      message: err.message,
-      code: err.code,
-      stack: err.stack
-    });
-    
+  } catch (err) {
+    console.error('Failed to establish database connection:', err);
     if (retries > 0) {
-      console.log(`Retrying connection in ${RETRY_DELAY}ms... (${retries} retries remaining)`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, MAX_RETRIES - retries);
+      const maxDelay = 30000;
+      const actualDelay = Math.min(delay, maxDelay);
+      
+      console.log(`Retrying connection in ${actualDelay}ms... (${retries} retries remaining)`);
+      await new Promise(resolve => setTimeout(resolve, actualDelay));
       await testConnection(retries - 1);
-    } else {
-      console.error('Maximum connection retries exceeded. Please check database configuration and connectivity.');
     }
   }
 }
 
-// Initialize connection on startup
 testConnection();
 
 export { queryWithRetry as query };

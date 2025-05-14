@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun, BookOpen, PenLine } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
-
+  const { data: session } = useSession();
+console.log(session,'data')
   return (
     <nav className="border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -20,12 +22,21 @@ export default function Navbar() {
           <Link href="/explore">
             <Button variant="ghost">Explore</Button>
           </Link>
-          <Link href="/auth/signin">
-            <Button variant="ghost">Sign In</Button>
-          </Link>
-          <Link href="/auth/signup">
-            <Button variant="ghost">Sign Up</Button>
-          </Link>
+          {session?.user ? (
+            <>
+              <span className="font-medium">{session.user.name}</span>
+              <Button variant="ghost" onClick={() => signOut()}>Sign Out</Button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/signin">
+                <Button variant="ghost">Sign In</Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button variant="ghost">Sign Up</Button>
+              </Link>
+            </>
+          )}
           <Link href="/write">
             <Button>
               <PenLine className="mr-2 h-4 w-4" />
